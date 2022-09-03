@@ -1,0 +1,171 @@
+### ==========[Test for gettin a specific bid]==========
+### Type:            Good weather test
+### Aim:             Check if the currect bid is returned
+### Total sub-tests: 2
+
+GET http://{{host}}:{{port}}/api/v1/bids/1
+Accept: application/json
+
+> {%
+client.test("Code 200", function() {client.assert(response.status === 200, "Response status for GET bid ID 1 is not 200");});
+client.test("Content test", function() {
+    client.assert(response.body.bidID === 1, "Bid ID is not 1");
+    client.assert(response.body.itemID === 2355, "Item ID is not 2355");
+    client.assert(response.body.price === 100, "Bid Price is not 100");
+    client.assert(response.body.bidder === "a", "Bidder username is not a");
+});
+%}
+
+### ==========[Test for gettin a all bids]==========
+### Type:            Bad weather test
+### Aim:             Check if the system currectly refuses the return all the bids
+### Total sub-tests: 1
+
+GET http://{{host}}:{{port}}/api/v1/bids
+Accept: application/json
+
+> {%
+client.test("Code 405", function() {client.assert(response.status === 405, "Response status for GET all bids is not 405");});
+%}
+
+### ==========[Test for gettin a non-existing bid]==========
+### Type:            Bad weather test
+### Aim:             Check if the gives the currect response for a not existing bid
+### Total sub-tests: 1
+
+GET http://{{host}}:{{port}}/api/v1/bids/100
+Accept: application/json
+
+> {%
+client.test("Code 404", function() {client.assert(response.status === 404, "Response status for GET bid ID 100 is not 404");});
+%}
+
+### ==========[Test for gettin a hidden bid unauthenticated]==========
+### Type:            Bad weather test
+### Aim:             Check if the system currectly refuses to return the bid for a hidden item if user is not authenticated
+### Total sub-tests: 1
+
+GET http://{{host}}:{{port}}/api/v1/bids/6
+Accept: application/json
+
+> {%
+client.test("Code 404", function() {client.assert(response.status === 404, "Response status for GET hidden bid is not 404");});
+%}
+
+### ==========[Test for unavailable HTTP request type]==========
+### Type:            Bad weather test
+### Aim:             Check if the system gives the currect error for using a not acceptable HTTP request type on the bid endpoint
+### Total sub-tests: 1
+
+POST http://{{host}}:{{port}}/api/v1/bids
+Accept: application/json
+
+> {%
+client.test("Code 405", function() {client.assert(response.status === 405, "Response status for POST is not 405");});
+%}
+
+### ==========[Test user login]==========
+### Type:            Good weather test
+### Aim:             Test successful user login
+### Total sub-tests: 2
+
+POST http://{{host}}:{{port}}/api/v1/users/login
+Content-Type: application/json
+
+{
+  "email": "test2@email.test",
+  "password": "Test2PW!"
+}
+
+> {%
+client.test("Code 200", function() {client.assert(response.status === 200, "Response status is not 200");});
+client.test("Content test", function() {client.assert(response.body.token !== undefined, "Token is not present after login");});
+client.global.set("authToken", response.body.token);
+%}
+
+### ==========[Test for gettin a hidden bid while not having premission]==========
+### Type:            Bad weather test
+### Aim:             Check if the system currectly refuses to return the hidden bid for an authenticated user who does not own the hidden item
+### Total sub-tests: 1
+
+GET http://{{host}}:{{port}}/api/v1/bids/6
+Accept: application/json
+Authorization: Bearer {{authToken}}
+
+> {%
+client.test("Code 403", function() {client.assert(response.status === 404, "Response status for GET hidden bid is not 404");});
+%}
+
+### ==========[Test user login]==========
+### Type:            Good weather test
+### Aim:             Test successful user login
+### Total sub-tests: 2
+
+POST http://{{host}}:{{port}}/api/v1/users/login
+Content-Type: application/json
+
+{
+  "email": "test1@email.test",
+  "password": "Test1PW!"
+}
+
+> {%
+client.test("Code 200", function() {client.assert(response.status === 200, "Response status is not 200");});
+client.test("Token test", function() {client.assert(response.body.token !== undefined, "Token is not present after login");});
+client.global.set("authToken", response.body.token);
+%}
+
+### ==========[Test for gettin a hidden bid while having premission]==========
+### Type:            Good weather test
+### Aim:             Check if the system currectly returns the hidden bid for an authenticated user who owns the hidden item
+### Total sub-tests: 1
+
+GET http://{{host}}:{{port}}/api/v1/bids/6
+Accept: application/json
+Authorization: Bearer {{authToken}}
+
+> {%
+client.test("Code 200", function() {client.assert(response.status === 200, "Response status for GET hidden bid is not 200");});
+%}
+
+### ==========[Test bid creation]==========
+### Type:            Good weather test
+### Aim:             Test successful bid creation
+### Total sub-tests: 2
+
+POST http://{{host}}:{{port}}/api/v1/items/8542/bids
+Accept: application/json
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "price": 700
+}
+
+> {%
+client.test("Code 201", function() {client.assert(response.status === 201, "Response status for POST bid is not 201");});
+client.test("Content test", function() {
+    client.assert(response.body.bidder === "a", "Bidder username is not a");
+    client.assert(response.body.itemID === 8542, "Item ID is not 8542");
+    client.assert(response.body.price === 700, "Bid Price is not 700");
+});
+client.global.set("testBidID", response.body.bidID);
+%}
+
+### ==========[Test bid created bid listing]==========
+### Type:            Good weather test
+### Aim:             Test successful listing of a created bid
+### Total sub-tests: 2
+
+GET http://{{host}}:{{port}}/api/v1/bids/{{testBidID}}
+Accept: application/json
+Authorization: Bearer {{authToken}}
+
+> {%
+client.test("Code 200", function() {client.assert(response.status === 200, "Response status for GET bid is not 200");});
+client.test("Content test", function() {
+    client.assert(response.body.bidder === "a", "Bidder username is not a");
+    client.assert(response.body.itemID === 8542, "Item ID is not 8542");
+    client.assert(response.body.price === 700, "Bid Price is not 700");
+});
+%}

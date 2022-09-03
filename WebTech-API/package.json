@@ -1,0 +1,33 @@
+{
+  "name": "webtech",
+  "version": "1.0.0",
+  "description": "Auction website backend",
+  "main": "src/api/server.js",
+  "scripts": {
+    "start": "node .",
+    "dev": "nodemon"
+  },
+  "keywords": [],
+  "author": "orp@orphoros.dev, committer@saren.dev",
+  "license": "GPL-3.0-only",
+  "dependencies": {
+    "bcrypt": "^5.0.1",
+    "cors": "^2.8.5",
+    "express": "^4.17.1",
+    "jsonwebtoken": "^8.5.1",
+    "nodemon": "^2.0.12",
+    "uuid": "^8.3.2"
+  },
+  "pkg": {
+    "assets": [],
+    "targets": [
+      "node12-win-x64",
+      "node12-linux-x64",
+      "node12-macos-x64"
+    ]
+  },
+  "bin": "src/api/server.js",
+  "engines": {
+    "node": "8.x"
+  }
+}

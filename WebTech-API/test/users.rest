@@ -1,0 +1,445 @@
+### ==========[Test for gettin an existing user]==========
+### Type:            Good weather test
+### Aim:             Check if the system returns the existing user
+### Total sub-tests: 2
+
+GET http://{{host}}:{{port}}/api/v1/users/b
+Accept: application/json
+
+> {%
+client.test("Code 200", function() {client.assert(response.status === 200, "Response status is not 200");});
+client.test("Content test", function() {
+    client.assert(response.body.username === 'b', "Username is not 'b'");
+});
+ %}
+
+### ==========[Test for gettin a non-existing user]==========
+### Type:            Bad weather test
+### Aim:             Check if the system returns an error for not finding a user
+### Total sub-tests: 1
+
+GET http://{{host}}:{{port}}/api/v1/users/x
+Accept: application/json
+
+> {%
+client.test("Code 404", function() {client.assert(response.status === 404, "Response status is not 404");});
+%}
+
+### ==========[Test for gettin all bids for an existing user]==========
+### Type:            Good weather test
+### Aim:             Check if the system returns all the bids for an existing user who does not own a hidden item
+### Total sub-tests: 3
+
+GET http://{{host}}:{{port}}/api/v1/users/c/bids
+Accept: application/json
+
+> {%
+client.test("Code 200", function() {client.assert(response.status === 200, "Response status is not 200");});
+client.test("Length Test", function() {client.assert(response.body.length === 1, "Bid list is not 1 bids long");});
+client.test("Content test", function() {
+    client.assert(response.body[0].bidID === 5, "Bid ID is not 5");
+    client.assert(response.body[0].itemID === 8542, "Item ID is not 8542");
+    client.assert(response.body[0].price === 500, "Bid Price is not 500");
+    client.assert(response.body[0].bidder === "c", "Bidder username is not 'c'");
+});
+%}
+
+### ==========[Test for gettin a bid with request parameters]==========
+### Type:            Good weather test
+### Aim:             Check if the system currectly filters the bids using request params
+### Total sub-tests: 2
+
+GET http://{{host}}:{{port}}/api/v1/users/c/bids?itemID=8542
+Accept: application/json
+
+> {%
+client.test("Code 200", function() {client.assert(response.status === 200, "Response status is not 200");});
+client.test("Length Test", function() {client.assert(response.body.length === 1, "Bid list is not 1 bid long");});
+%}
+
+### ==========[Test for gettin a bid with wrong request parameters]==========
+### Type:            Bad weather test
+### Aim:             Check if the system returns an empty array if it doesn't find a matching bid
+### Total sub-tests: 2
+
+GET http://{{host}}:{{port}}/api/v1/users/b/bids?itemID=1010
+Accept: application/json
+
+> {%
+client.test("Code 200", function() {client.assert(response.status === 200, "Response status is not 200");});
+client.test("Length Test", function() {client.assert(response.body.length === 0, "Bid list is not empty");});
+%}
+
+### ==========[Test for gettin a bid for a non-existing user]==========
+### Type:            Bad weather test
+### Aim:             Check if the system returns the currect error when trying to get bids for a non-existing user
+### Total sub-tests: 1
+
+GET http://{{host}}:{{port}}/api/v1/users/x/bids
+Accept: application/json
+
+> {%
+client.test("Code 404", function() {client.assert(response.status === 404, "Response status is not 404");});
+%}
+
+### ==========[Test for getting all items for user 'b' while hiding the unlisted item]==========
+### Type:            Good weather test
+### Aim:             Check if the system returns the list of items except the hidden item when the user that is not logged in
+### Total sub-tests: 3
+
+GET http://{{host}}:{{port}}/api/v1/users/b/items
+Accept: application/json
+
+> {%
+client.test("Code 200", function() {client.assert(response.status === 200, "Response status is not 200");});
+client.test("Length Test", function() {client.assert(response.body.length === 1, "Items list for user 'b' is not 1! The hidden item is most likely shown!");});
+client.test("Content test", function() {
+    client.assert(response.body[0].itemID === 8542, "Item ID is not 8542");
+    client.assert(response.body[0].name === 'Hewlett Packard N3541', "Item name is not Hewlett Packard N3541");
+    client.assert(response.body[0].manufacturingYear === 1998, "Manufacturing year is not 1998");
+});
+%}
+
+### ==========[Test user login]==========
+### Type:            Good weather test
+### Aim:             Test successful user login
+### Total sub-tests: 2
+
+POST http://{{host}}:{{port}}/api/v1/users/login
+Content-Type: application/json
+
+{
+  "email": "test1@email.test",
+  "password": "Test1PW!"
+}
+
+> {%
+client.test("Code 200", function() {client.assert(response.status === 200, "Response status is not 200");});
+client.test("Content test", function() {client.assert(response.body.token !== undefined, "Token is not present after login");});
+client.global.set("authToken", response.body.token);
+%}
+
+### ==========[Test getting all items for user 'a' while authenticated]==========
+### Type:            Good weather test
+### Aim:             Check if the system returns the list of items including the hidden item
+### Total sub-tests: 3
+
+GET http://{{host}}:{{port}}/api/v1/users/a/items
+Accept: application/json
+Authorization: Bearer {{authToken}}
+
+> {%
+client.test("Code 200", function() {client.assert(response.status === 200, "Response status is not 200");});
+client.test("Length Test", function() {client.assert(response.body.length === 2, "Items list for user 'a' is not 2!");});
+client.test("Content test", function() {
+    client.assert(response.body[1].itemID === 9933, "Item ID is not 9933");
+    client.assert(response.body[1].name === 'Unlisted laptop', "Item name is not Unlisted laptop");
+    client.assert(response.body[1].manufacturingYear === 2000, "Manufacturing year is not 2000");
+});
+%}
+
+### ==========[Test user login]==========
+### Type:            Good weather test
+### Aim:             Test successful user login
+### Total sub-tests: 2
+
+POST http://{{host}}:{{port}}/api/v1/users/login
+Content-Type: application/json
+
+{
+  "email": "test2@email.test",
+  "password": "Test2PW!"
+}
+
+> {%
+client.test("Code 200", function() {client.assert(response.status === 200, "Response status is not 200");});
+client.test("Content test", function() {client.assert(response.body.token !== undefined, "Token is not present after login");});
+client.global.set("authToken", response.body.token);
+%}
+
+### ==========[Test getting all items for user 'a' while authenticated as a different user]==========
+### Type:            Good weather test
+### Aim:             Check if the system returns the list of items not including the hidden item while logged in
+### Total sub-tests: 3
+
+GET http://{{host}}:{{port}}/api/v1/users/a/items
+Accept: application/json
+Authorization: Bearer {{authToken}}
+
+> {%
+client.test("Code 200", function() {client.assert(response.status === 200, "Response status is not 200");});
+client.test("Length Test", function() {client.assert(response.body.length === 1, "Items list for user 'b' is not 1! The hidden item is most likely shown!");});
+client.test("Content test", function() {
+    client.assert(response.body[0].itemID === 2355, "Item ID is not 2355");
+    client.assert(response.body[0].name === 'ZX Spectrum - Brand new, in-box', "Item name is not ZX Spectrum - Brand new, in-box");
+    client.assert(response.body[0].manufacturingYear === 1983, "Manufacturing year is not 1983");
+});
+%}
+
+### ==========[Test for logging in with incorrect user credentials]==========
+### Type:            Bad weather test
+### Aim:             Check if the system correctly does not log in the user
+### Total sub-tests: 1
+
+POST http://{{host}}:{{port}}/api/v1/users/login
+Content-Type: application/json
+
+{
+  "email": "test1@email.test",
+  "password": "wrongPassword1!"
+}
+
+> {%
+client.test("Code 400", function() {client.assert(response.status === 400, "Response status is not 400");});
+%}
+
+### ==========[Test for signing up with currect data]==========
+### Type:            Good weather test
+### Aim:             Check if the system correctly registers a user
+### Total sub-tests: 1
+
+POST http://{{host}}:{{port}}/api/v1/users
+Content-Type: application/json
+
+{
+  "email": "test-new@email.test",
+  "username": "Bob",
+  "password": "!fancyPassword101!"
+}
+
+> {%
+client.test("Code 201", function() {client.assert(response.status === 201, "Response status is not 201");});
+%}
+
+### ==========[Test for signing up with incorrect data]==========
+### Type:            Bad weather test
+### Aim:             Check if the system recognises incorrect email format
+### Total sub-tests: 1
+
+POST http://{{host}}:{{port}}/api/v1/users
+Content-Type: application/json
+
+{
+  "email": "test.com",
+  "username": "Bob",
+  "password": "!fancyPassword101!"
+}
+
+> {%
+client.test("Code 400", function() {client.assert(response.status === 400, "Response status is not 400");});
+%}
+
+### ==========[Test for signing up with incorrect data]==========
+### Type:            Bad weather test
+### Aim:             Check if the system recognises incorrect password format
+### Total sub-tests: 1
+
+POST http://{{host}}:{{port}}/api/v1/users
+Content-Type: application/json
+
+{
+  "email": "test-new@email.test",
+  "username": "Bob",
+  "password": "weakpw"
+}
+
+> {%
+client.test("Code 400", function() {client.assert(response.status === 400, "Response status is not 400");});
+%}
+
+### ==========[Test for signing up with incorrect data]==========
+### Type:            Bad weather test
+### Aim:             Check if the user forgets to add a required field
+### Total sub-tests: 1
+
+POST http://{{host}}:{{port}}/api/v1/users
+Content-Type: application/json
+
+{
+  "email": "test-new@email.test",
+  "username": "Bob"
+}
+
+> {%
+client.test("Code 400", function() {client.assert(response.status === 400, "Response status is not 400");});
+%}
+
+### ==========[Test for registering with an existing account]==========
+### Type:            Bad weather test
+### Aim:             Check if the system refuses to register new email
+### Total sub-tests: 1
+
+POST http://{{host}}:{{port}}/api/v1/users
+Content-Type: application/json
+
+{
+  "email": "test-new@email.test",
+  "username": "Bob",
+  "password": "!fancyPassword101!"
+}
+
+> {%
+client.test("Code 400", function() {client.assert(response.status === 400, "Response status is not 400");});
+%}
+
+### ==========[Test for logging in with correct user credentials]==========
+### Type:            Good weather test
+### Aim:             Check if the system correctly logs in the user
+### Total sub-tests: 2
+
+POST http://{{host}}:{{port}}/api/v1/users/login
+Content-Type: application/json
+
+{
+  "email": "test-new@email.test",
+  "password": "!fancyPassword101!"
+}
+
+> {%
+client.test("Code 200", function() {client.assert(response.status === 200, "Response status is not 200");});
+client.test("Content test", function() {client.assert(response.body.token !== undefined, "Token is not present after login");});
+client.global.set("authToken", response.body.token);
+%}
+
+### ==========[Test for PATCHing a user]==========
+### Type:            Good weather test
+### Aim:             Check if the system correctly allows the user to update themselves using PATCH
+### Total sub-tests: 1
+
+PATCH http://{{host}}:{{port}}/api/v1/users/Bob
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "email": "test-new2@email.test",
+  "password": "!fancierPassword101!"
+}
+
+> {%
+client.test("Code 200", function() {client.assert(response.status === 200, "Response status is not 200");});
+%}
+
+### ==========[Test for logging in with correct user credentials]==========
+### Type:            Good weather test
+### Aim:             Check if the system correctly logs in the user
+### Total sub-tests: 2
+
+POST http://{{host}}:{{port}}/api/v1/users/login
+Content-Type: application/json
+
+{
+  "email": "test-new2@email.test",
+  "password": "!fancierPassword101!"
+}
+
+> {%
+client.test("Code 200", function() {client.assert(response.status === 200, "Response status is not 200");});
+client.test("Content test", function() {client.assert(response.body.token !== undefined, "Token is not present after login");});
+client.global.set("authToken", response.body.token);
+%}
+
+### ==========[Test for PATCHing another user]==========
+### Type:            Bad weather test
+### Aim:             Check if the system correctly blocks the user from updating another account with PATCH
+### Total sub-tests: 1
+
+PATCH http://{{host}}:{{port}}/api/v1/users/a
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "password": "!fancierPassword101!"
+}
+
+> {%
+client.test("Code 403", function() {client.assert(response.status === 403, "Response status is not 403");});
+%}
+
+### ==========[Test for DELETE-ing another user]==========
+### Type:            Bad weather test
+### Aim:             Check if the system correctly blocks a non-admin user from deleting another account
+### Total sub-tests: 1
+
+DELETE http://{{host}}:{{port}}/api/v1/users/a
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+> {%
+client.test("Code 403", function() {client.assert(response.status === 403, "Response status is not 403");});
+%}
+
+### ==========[Test for DELETE-ing a user as the owner]==========
+### Type:            Good weather test
+### Aim:             Check if the system correctly allows the owner to delete their account
+### Total sub-tests: 1
+
+DELETE http://{{host}}:{{port}}/api/v1/users/Bob
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+> {%
+client.test("Code 204", function() {client.assert(response.status === 204, "Response status is not 204");});
+%}
+
+### ==========[Test for GETting a deleted user]==========
+### Type:            Bad weather test
+### Aim:             Check if the system correctly blocks the user from viewing a deleted user account
+### Total sub-tests: 1
+
+GET http://{{host}}:{{port}}/api/v1/users/Bob
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+> {%
+client.test("Code 404", function() {client.assert(response.status === 404, "Response status is not 404");});
+%}
+
+### ==========[Test for signing up with currect data]==========
+### Type:            Good weather test
+### Aim:             Check if the system correctly registers a user
+### Total sub-tests: 1
+
+POST http://{{host}}:{{port}}/api/v1/users
+Content-Type: application/json
+
+{
+  "email": "test-new@email.test",
+  "username": "Bob",
+  "password": "!fancyPassword101!"
+}
+
+> {%
+client.test("Code 201", function() {client.assert(response.status === 201, "Response status is not 201");});
+%}
+
+### ==========[Test for logging in with correct user credentials]==========
+### Type:            Good weather test
+### Aim:             Check if the system correctly logs in the user
+### Total sub-tests: 2
+
+POST http://{{host}}:{{port}}/api/v1/users/login
+Content-Type: application/json
+
+{
+  "email": "admin@development.test",
+  "password": "Test4AdminPW!"
+}
+
+> {%
+client.test("Code 200", function() {client.assert(response.status === 200, "Response status is not 200");});
+client.test("Content test", function() {client.assert(response.body.token !== undefined, "Token is not present after login");});
+client.global.set("authToken", response.body.token);
+%}
+
+### ==========[Test for DELETE-ing a user as an admin]==========
+### Type:            Good weather test
+### Aim:             Check if the system correctly allows an admin to delete a user account
+### Total sub-tests: 1
+
+DELETE http://{{host}}:{{port}}/api/v1/users/Bob
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+> {%
+client.test("Code 204", function() {client.assert(response.status === 204, "Response status is not 204");});
+%}

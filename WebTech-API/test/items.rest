@@ -1,0 +1,362 @@
+### ==========[Test for gettin an existing item]==========
+### Type:            Good weather test
+### Aim:             Check if the system returns the existing item
+### Total sub-tests: 2
+
+GET http://{{host}}:{{port}}/api/v1/items/2355
+Accept: application/json
+
+> {%
+client.test("Code 200", function() {client.assert(response.status === 200, "Response status is not 200");});
+client.test("Content test", function() {
+    client.assert(response.body.itemID === 2355, "Item ID is not 2355");
+    client.assert(response.body.cpu === 'Zilog', "CPU is not Zilog");
+    client.assert(response.body.manufacturingYear === 1983, "Manufacturing year is not 1983");
+});
+%}
+
+### ==========[Test for successful filtering on items using query parameters]==========
+### Type:            Good weather test
+### Aim:             Check if the system returns the currect items based on filters
+### Total sub-tests: 3
+
+GET http://{{host}}:{{port}}/api/v1/items?expansionSlots=3
+Accept: application/json
+
+> {%
+client.test("Code 200", function() {client.assert(response.status === 200, "Response status is not 200");});
+client.test("Length Test", function() {client.assert(response.body.length === 1, "Wrong amount of items were returned when using filtering");});
+client.test("Content test", function() {
+    client.assert(response.body[0].itemID === 8542, "Item ID is not 8542");
+    client.assert(response.body[0].maxRAM === 524288, "Max RAM is not 524288");
+    client.assert(response.body[0].manufacturingYear === 1998, "Manufacturing year is not 1998");
+});
+%}
+
+### ==========[Test for filtering on the hidden item using query parameters]==========
+### Type:            Bad weather test
+### Aim:             Check if the system correctly does not return the hidden item while not logged in
+### Total sub-tests: 2
+
+GET http://{{host}}:{{port}}/api/v1/items?manufacturingYear=2000
+Accept: application/json
+
+> {%
+client.test("Code 200", function() {client.assert(response.status === 200, "Response status is not 200");});
+client.test("Length Test", function() {client.assert(response.body.length === 0, "Wrong amount of items were returned when using filtering");});
+%}
+
+### ==========[Test for filtering on parameters that should be ignored]==========
+### Type:            Bad weather test
+### Aim:             Check if the system correctly ignores the not supported query parameters
+### Total sub-tests: 2
+
+GET http://{{host}}:{{port}}/api/v1/items?itemID=2355
+Accept: application/json
+
+> {%
+client.test("Code 200", function() {client.assert(response.status === 200, "Response status is not 200");});
+client.test("Length Test", function() {client.assert(response.body.length !== 1, "Wrong amount of items were returned when using filtering");});
+%}
+
+### ==========[Test for getting all the bids for an existing item]==========
+### Type:            Good weather test
+### Aim:             Check if the system correctly returns all the bids for an item
+### Total sub-tests: 3
+
+GET http://{{host}}:{{port}}/api/v1/items/2355/bids
+Accept: application/json
+
+> {%
+client.test("Code 200", function() {client.assert(response.status === 200, "Response status is not 200");});
+client.test("Length Test", function() {client.assert(response.body.length === 3, "Bid list is not 3 bids long");});
+client.test("Content test", function() {
+    client.assert(response.body[0].bidID === 1, "Bid ID is not 1");
+    client.assert(response.body[0].itemID === 2355, "Item ID is not 2355");
+    client.assert(response.body[0].price === 100, "Bid Price is not 100");
+    client.assert(response.body[0].bidder === "a", "Bidder username is not 'A'");
+});
+%}
+
+### ==========[Test for getting a hidden item whithout loggin in]==========
+### Type:            Bad weather test
+### Aim:             Check if the system does not return the hidden item while the client is not authorised
+### Total sub-tests: 1
+
+GET http://{{host}}:{{port}}/api/v1/items/9933
+Accept: application/json
+
+> {%
+client.test("Code 403", function() {client.assert(response.status === 404, "Response status is not 404");});
+%}
+
+### ==========[Test for logging in with correct user credentials]==========
+### Type:            Good weather test
+### Aim:             Check if the system correctly logs in the user
+### Total sub-tests: 2
+
+POST http://{{host}}:{{port}}/api/v1/users/login
+Content-Type: application/json
+
+{
+    "email": "test2@email.test",
+    "password": "Test2PW!"
+}
+
+> {%
+client.test("Code 200", function() {client.assert(response.status === 200, "Response status is not 200");});
+client.test("Content test", function() {client.assert(response.body.token !== undefined, "Token is not present after login");});
+client.global.set("authToken", response.body.token);
+%}
+
+### ==========[Test for getting a hidden item with a logged in user who does not own the item]==========
+### Type:            Bad weather test
+### Aim:             Check if the system correctly does not allow the user to see the hidden item
+### Total sub-tests: 1
+
+GET http://{{host}}:{{port}}/api/v1/items/9933
+Authorization: Bearer {{authToken}}
+
+Accept: application/json
+
+> {%
+client.test("Code 403", function() {client.assert(response.status === 404, "Response status is not 404");});
+%}
+
+### ==========[Test for logging in with correct user credentials]==========
+### Type:            Good weather test
+### Aim:             Check if the system correctly logs in the user
+### Total sub-tests: 2
+
+POST http://{{host}}:{{port}}/api/v1/users/login
+Content-Type: application/json
+
+{
+  "email": "test1@email.test",
+  "password": "Test1PW!"
+}
+
+> {%
+client.test("Code 200", function() {client.assert(response.status === 200, "Response status is not 200");});
+client.test("Content test", function() {client.assert(response.body.token !== undefined, "Token is not present after login");});
+client.global.set("authToken", response.body.token);
+%}
+
+### ==========[Test for getting a hidden item with a logged in user who owns the item]==========
+### Type:            Good weather test
+### Aim:             Check if the system correctly allows the user to see the hidden item
+### Total sub-tests: 1
+
+GET http://{{host}}:{{port}}/api/v1/items/9933
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+> {%
+client.test("Code 200", function() {client.assert(response.status === 200, "Response status is not 200");});
+%}
+
+### ==========[Test for logging in with correct user credentials]==========
+### Type:            Good weather test
+### Aim:             Check if the system correctly logs in the user
+### Total sub-tests: 2
+
+POST http://{{host}}:{{port}}/api/v1/users/login
+Content-Type: application/json
+
+{
+  "email": "admin@development.test",
+  "password": "Test4AdminPW!"
+}
+
+> {%
+client.test("Code 200", function() {client.assert(response.status === 200, "Response status is not 200");});
+client.test("Content test", function() {client.assert(response.body.token !== undefined, "Token is not present after login");});
+client.global.set("authToken", response.body.token);
+%}
+
+### ==========[Test for getting a hidden item with a logged in user who is an admin]==========
+### Type:            Good weather test
+### Aim:             Check if the system correctly allows the user to see the hidden item with admin privileges
+### Total sub-tests: 1
+
+GET http://{{host}}:{{port}}/api/v1/items/9933
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+> {%
+client.test("Code 200", function() {client.assert(response.status === 200, "Response status is not 200");});
+%}
+
+### ==========[Test for logging in with correct user credentials]==========
+### Type:            Good weather test
+### Aim:             Check if the system correctly logs in the user
+### Total sub-tests: 2
+
+POST http://{{host}}:{{port}}/api/v1/users/login
+Content-Type: application/json
+
+{
+  "email": "test2@email.test",
+  "password": "Test2PW!"
+}
+
+> {%
+client.test("Code 200", function() {client.assert(response.status === 200, "Response status is not 200");});
+client.test("Content test", function() {client.assert(response.body.token !== undefined, "Token is not present after login");});
+client.global.set("authToken", response.body.token);
+%}
+
+### ==========[Test for posting an item]==========
+### Type:            Good weather test
+### Aim:             Check if the system correctly allows the user to post a new item
+### Total sub-tests: 1
+
+POST http://{{host}}:{{port}}/api/v1/items/
+Authorization: Bearer {{authToken}}
+Accept: application/json
+Content-Type: application/json
+
+{
+  "name": "Dell Optiplex GX620",
+  "description": "Used, Core 2 Quad installed with everything else as stock. Buyer to collect",
+  "manufacturingYear": 2008,
+  "cpu": "Intel x86",
+  "maxRAM": 4194304,
+  "expansionSlots": 3,
+  "itemCondition": "Used",
+  "auctionEndTime": "2021-11-20T00:13:37.000Z",
+  "minBid": 39
+}
+
+> {%
+client.test("Code 201", function() {client.assert(response.status === 201, "Response status is not 201");});
+client.global.set("testItemID", response.body.itemID);
+%}
+
+### ==========[Test for posting an item with an invalid CPU]==========
+### Type:            Bad weather test
+### Aim:             Check if the system correctly blocks the user from posting a new item with an incorrect CPU
+### Total sub-tests: 1
+
+POST http://{{host}}:{{port}}/api/v1/items/
+Authorization: Bearer {{authToken}}
+Accept: application/json
+Content-Type: application/json
+
+{
+  "name": "Dell Optiplex GX620",
+  "description": "Used, Core 2 Quad installed with everything else as stock. Buyer to collect",
+  "manufacturingYear": 2008,
+  "cpu": "Incorrect",
+  "maxRAM": 4194304,
+  "expansionSlots": 3,
+  "itemCondition": "Used",
+  "auctionEndTime": "2021-11-20T00:13:37.000Z",
+  "minBid": 39
+}
+
+> {%
+client.test("Code 400", function() {client.assert(response.status === 400, "Response status is not 400");});
+%}
+
+### ==========[Test for PATCHing an item]==========
+### Type:            Good weather test
+### Aim:             Check if the system correctly allows the user to update an item using PATCH
+### Total sub-tests: 2
+
+PATCH http://{{host}}:{{port}}/api/v1/items/{{testItemID}}
+Authorization: Bearer {{authToken}}
+Accept: application/json
+Content-Type: application/json
+
+{
+  "isPublic": true,
+  "maxRAM": 11122233
+}
+
+> {%
+client.test("Code 200", function() {client.assert(response.status === 200, "Response status is not 200");});
+client.test("Content test", function() {client.assert(response.body.maxRAM === 11122233, "Item max ram is not 11122233");});
+%}
+
+### ==========[Test for logging in with correct user credentials]==========
+### Type:            Good weather test
+### Aim:             Check if the system correctly logs in the user
+### Total sub-tests: 2
+
+POST http://{{host}}:{{port}}/api/v1/users/login
+Content-Type: application/json
+
+{
+  "email": "test1@email.test",
+  "password": "Test1PW!"
+}
+
+> {%
+client.test("Code 200", function() {client.assert(response.status === 200, "Response status is not 200");});
+client.test("Content test", function() {client.assert(response.body.token !== undefined, "Token is not present after login");});
+client.global.set("authToken", response.body.token);
+%}
+
+### ==========[Test for PATCHing an item as not the seller]==========
+### Type:            Bad weather test
+### Aim:             Check if the system correctly blocks the user from updating an item using PATCH while not being the seller
+### Total sub-tests: 1
+
+PATCH http://{{host}}:{{port}}/api/v1/items/{{testItemID}}
+Authorization: Bearer {{authToken}}
+Accept: application/json
+Content-Type: application/json
+
+{
+  "maxRAM": 11122233
+}
+
+> {%
+client.test("Code 403", function() {client.assert(response.status === 403, "Response status is not 403");});
+%}
+
+### ==========[Test for logging in with correct user credentials]==========
+### Type:            Good weather test
+### Aim:             Check if the system correctly logs in the user
+### Total sub-tests: 2
+
+POST http://{{host}}:{{port}}/api/v1/users/login
+Content-Type: application/json
+
+{
+  "email": "test2@email.test",
+  "password": "Test2PW!"
+}
+
+> {%
+client.test("Code 200", function() {client.assert(response.status === 200, "Response status is not 200");});
+client.test("Content test", function() {client.assert(response.body.token !== undefined, "Token is not present after login");});
+client.global.set("authToken", response.body.token);
+%}
+
+### ==========[Test for DELETE-ing an item]==========
+### Type:            Good weather test
+### Aim:             Check if the system correctly allows the user to delete an item
+### Total sub-tests: 1
+
+DELETE http://{{host}}:{{port}}/api/v1/items/{{testItemID}}
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+> {%
+client.test("Code 204", function() {client.assert(response.status === 204, "Response status is not 204");});
+%}
+
+### ==========[Test for GETting a deleted item]==========
+### Type:            Bad weather test
+### Aim:             Check if the system correctly blocks the user from viewing a deleted item
+### Total sub-tests: 1
+
+GET http://{{host}}:{{port}}/api/v1/items/{{testItemID}}
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+> {%
+client.test("Code 404", function() {client.assert(response.status === 404, "Response status is not 404");});
+%}
